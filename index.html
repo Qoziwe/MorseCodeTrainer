@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morse Code Trainer</title>
+    <style>
+        :root {
+            --bg-color: #121214;
+            --panel-bg: #1e1e24;
+            --panel-side: #23232a;
+            --text-main: #e0e0e0;
+            --accent: #00ffcc;
+            --accent-hover: #00ccaa;
+            --error: #ff4d4d;
+            --success: #4dff4d;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* 100vh Strict layout for PC */
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            padding: 2vh 2vw;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 1.5vh;
+            flex-shrink: 0;
+        }
+
+        header h1 {
+            color: var(--accent);
+            text-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
+            font-size: 26px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 1.5vh;
+            background: var(--panel-bg);
+            padding: 5px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            z-index: 20;
+            flex-shrink: 0;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            padding: 6px 15px;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: 0.3s;
+        }
+
+        .tab-btn.active {
+            background: var(--accent);
+            color: var(--bg-color);
+            font-weight: bold;
+            box-shadow: 0 0 10px var(--accent);
+        }
+
+        /* WRAPPER FOR PANELS */
+        .main-wrapper {
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            width: 100%;
+            max-width: 1200px;
+            flex: 1;
+            min-height: 0;
+            position: relative;
+        }
+
+        /* MAIN PANEL (FIXED: Added position: relative) */
+        .main-panel {
+            width: 100%;
+            max-width: 750px;
+            background: var(--panel-bg);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.7);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            position: relative; /* Restricts absolute children to this box */
+        }
+
+        .toggle-ref-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: transparent;
+            color: var(--accent);
+            border: 2px solid var(--accent);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            transition: 0.3s;
+            z-index: 30;
+        }
+
+        .toggle-ref-btn:hover {
+            background: var(--accent);
+            color: var(--bg-color);
+        }
+
+        /* REFERENCE PANEL */
+        .reference-panel {
+            width: 320px;
+            background: var(--panel-side);
+            padding: 25px 20px;
+            margin: 20px 0;
+            border-radius: 0 15px 15px 0;
+            z-index: 5;
+            margin-left: -320px;
+            opacity: 0;
+            transform: translateX(-30px);
+            transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+            overflow-y: auto;
+            box-shadow: 10px 5px 20px rgba(0,0,0,0.4);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-wrapper.show-ref .reference-panel {
+            margin-left: -15px;
+            padding-left: 35px;
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .tab-content.active { 
+            display: flex; 
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* CONVERTER */
+        .converter-grid {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .converter-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        textarea {
+            flex: 1;
+            width: 100%;
+            background: #2a2a32;
+            border: 2px solid #3a3a45;
+            border-radius: 10px;
+            color: var(--accent);
+            padding: 15px;
+            font-size: 16px;
+            resize: none;
+            transition: 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.2);
+        }
+
+        .btn {
+            background: var(--accent);
+            color: var(--bg-color);
+            border: none;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 15px;
+            display: inline-flex;
+            justify-content: center;
+        }
+        .btn:hover { background: var(--accent-hover); transform: scale(1.05); }
+
+        /* TRAINER */
+        .trainer-container { 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+        }
+
+        .mode-switch {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 10px;
+            flex-shrink: 0;
+        }
+
+        .mode-switch button {
+            background: #2a2a32;
+            border: 2px solid #3a3a45;
+            color: var(--text-main);
+            padding: 6px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: 0.3s;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        .mode-switch button.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--bg-color);
+        }
+
+        #uiPractice, #uiFreeInput { text-align: center; width: 100%; }
+
+        .target-letter {
+            font-size: 60px;
+            font-weight: bold;
+            color: var(--accent);
+            margin: 5px 0;
+            text-shadow: 0 0 20px rgba(0, 255, 204, 0.4);
+        }
+
+        .input-display {
+            font-size: 35px;
+            letter-spacing: 10px;
+            height: 40px;
+            color: var(--text-main);
+        }
+
+        .telegraph-key {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #2a2a32, #1e1e24);
+            border: 5px solid var(--accent);
+            color: var(--accent);
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 15px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow:  0 10px 20px rgba(0,0,0,0.5), inset 0 0 15px rgba(0,255,204,0.1);
+            user-select: none;
+            transition: 0.1s;
+        }
+
+        .telegraph-key:active, .telegraph-key.active-key {
+            transform: scale(0.95) translateY(5px);
+            box-shadow: 0 5px 10px rgba(0,0,0,0.5), inset 0 0 30px rgba(0,255,204,0.5);
+            background: var(--accent);
+            color: var(--bg-color);
+        }
+
+        .status { font-size: 16px; font-weight: bold; height: 20px; margin-bottom: 5px; }
+        .status.success { color: var(--success); }
+        .status.error { color: var(--error); }
+
+        .free-text-box {
+            min-height: 60px;
+            background: #1a1a20;
+            border: 2px solid #3a3a45;
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 18px;
+            color: var(--accent);
+            letter-spacing: 2px;
+            margin: 10px auto;
+            text-transform: uppercase;
+            word-wrap: break-word;
+            text-align: left;
+            width: 80%;
+        }
+
+        /* Reference Internal */
+        .ref-rules {
+            background: #1a1a20;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 12px;
+            line-height: 1.5;
+            flex-shrink: 0;
+        }
+        .ref-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        .ref-card {
+            background: #1a1a20;
+            padding: 6px;
+            border-radius: 8px;
+            text-align: center;
+            border-bottom: 2px solid var(--accent);
+        }
+        .ref-card .char { font-size: 16px; font-weight: bold; }
+        .ref-card .morse { font-size: 14px; color: var(--accent); letter-spacing: 2px; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #3a3a45; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+        /* ADAPTATION FOR MOBILE PHONES */
+        @media (max-width: 900px) {
+            body { 
+                height: auto; 
+                min-height: 100vh; 
+                overflow-y: auto;
+                overflow-x: hidden;
+                padding: 15px;
+            }
+            .main-wrapper { 
+                flex-direction: column; 
+                align-items: center; 
+            }
+            .main-panel {
+                height: auto;
+                min-height: 500px;
+                overflow-y: visible;
+            }
+            .reference-panel {
+                width: 100%; max-width: 750px;
+                margin: 0; margin-top: -100%; 
+                border-radius: 0 0 15px 15px;
+                height: auto;
+            }
+            .main-wrapper.show-ref .reference-panel { 
+                margin-top: -15px; 
+                padding-top: 35px;
+                padding-left: 20px;
+            }
+            .converter-grid { 
+                flex-direction: column; 
+                gap: 15px;
+            }
+            textarea {
+                min-height: 120px;
+                flex: none;
+            }
+            .telegraph-key {
+                width: 100px;
+                height: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Morse Code Trainer</h1>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('converter')">Converter</button>
+        <button class="tab-btn" onclick="switchTab('trainer')">Telegraph Key</button>
+    </div>
+
+    <div class="main-wrapper" id="mainWrapper">
+        <!-- MAIN PANEL -->
+        <div class="main-panel">
+            <button class="toggle-ref-btn" onclick="toggleReference()" id="refToggleBtn">Reference</button>
+
+            <!-- TAB: CONVERTER -->
+            <div id="converter" class="tab-content active">
+                <h2 style="margin-bottom: 5px;">Translator</h2>
+                <div class="converter-grid">
+                    <div class="converter-column">
+                        <h3 style="margin-bottom: 8px; font-size: 15px;">Text</h3>
+                        <textarea id="textInput" placeholder="ENTER TEXT HERE..."></textarea>
+                    </div>
+                    <div class="converter-column">
+                        <h3 style="margin-bottom: 8px; font-size: 15px;">Morse Code</h3>
+                        <textarea id="morseInput" placeholder=".-.. ..- -.-. . ..."></textarea>
+                    </div>
+                </div>
+                <div style="text-align: center; flex-shrink: 0;">
+                    <button class="btn" onclick="playMorseFromText()">Play Morse Code</button>
+                </div>
+            </div>
+
+            <!-- TAB: TRAINER -->
+            <div id="trainer" class="tab-content">
+                <h2 style="margin-bottom: 10px; text-align: center;">Telegraph Key</h2>
+                
+                <div class="mode-switch">
+                    <button class="active" id="btnModePractice" onclick="setMode('practice')">Practice</button>
+                    <button id="btnModeFree" onclick="setMode('free')">Free Input</button>
+                </div>
+
+                <div class="trainer-container">
+                    <!-- Practice UI -->
+                    <div id="uiPractice">
+                        <p style="color:#aaa; font-size: 14px;">Tap the random letter:</p>
+                        <div class="target-letter" id="targetLetter">A</div>
+                        <div class="status" id="trainerStatus"></div>
+                    </div>
+
+                    <!-- Free Input UI -->
+                    <div id="uiFreeInput" style="display: none;">
+                        <p style="color:#aaa; font-size: 14px;">Look at the reference and tap the text:</p>
+                        <div class="free-text-box" id="freeTextBox"></div>
+                        <button class="btn" style="padding: 5px 12px; font-size: 12px; margin-top: 5px;" onclick="document.getElementById('freeTextBox').innerText = ''">Clear Input</button>
+                    </div>
+                    
+                    <div class="input-display" id="inputDisplay"></div>
+                    <div class="telegraph-key" id="telegraphKey">TAP</div>
+                    
+                    <p style="color: #888; font-size: 12px; margin-top: 10px; text-align: center;">
+                        Short press — dot (·) | Long press (>200ms) — dash (-)<br><br>
+                        <span style="color: var(--accent);">You can use Numpad Enter key</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- REFERENCE PANEL -->
+        <div class="reference-panel">
+            <h2 style="margin-bottom: 15px; color: var(--accent); text-align: center; font-size: 20px;">Reference</h2>
+            
+            <div class="ref-rules">
+                <h4 style="color: var(--accent); margin-bottom: 5px;">Timing Rules:</h4>
+                <ul style="padding-left: 15px;">
+                    <li>Between dots/dashes of one letter — 1 dot.</li>
+                    <li>Between letters — 3 dots (auto-read after 600ms).</li>
+                    <li>Between words — 7 dots (auto-space after 1.5s).</li>
+                </ul>
+            </div>
+            
+            <h3 style="margin-bottom: 10px; text-align: center; font-size: 16px;">Alphabet</h3>
+            <div class="ref-grid" id="refGrid">
+                <!-- Generated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const morseDict = {
+            'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.', 'G': '--.', 'H': '....', 'I': '..', 'J': '.---',
+            'K': '-.-', 'L': '.-..', 'M': '--', 'N': '-.', 'O': '---', 'P': '.--.', 'Q': '--.-', 'R': '.-.', 'S': '...', 'T': '-',
+            'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-', 'Y': '-.--', 'Z': '--..',
+            '1': '.----', '2': '..---', '3': '...--', '4': '....-', '5': '.....', '6': '-....', '7': '--...', '8': '---..', '9': '----.', '0': '-----',
+            '.': '.-.-.-', ',': '--..--', '?': '..--..', '!': '-.-.--', ' ': '/'
+        };
+        const reverseDict = Object.fromEntries(Object.entries(morseDict).map(([k, v]) => [v, k]));
+        const trainerLetters = Object.keys(morseDict).filter(k => /[A-Z0-9]/.test(k));
+
+        let currentTab = 'converter';
+        let isRefOpen = false;
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+            currentTab = tabId;
+        }
+
+        function toggleReference() {
+            const wrapper = document.getElementById('mainWrapper');
+            const btn = document.getElementById('refToggleBtn');
+            isRefOpen = !isRefOpen;
+            if (isRefOpen) {
+                wrapper.classList.add('show-ref');
+                btn.innerText = "Close";
+            } else {
+                wrapper.classList.remove('show-ref');
+                btn.innerText = "Reference";
+            }
+        }
+
+        let trainerMode = 'practice';
+
+        function setMode(mode) {
+            trainerMode = mode;
+            document.getElementById('btnModePractice').classList.toggle('active', mode === 'practice');
+            document.getElementById('btnModeFree').classList.toggle('active', mode === 'free');
+            
+            document.getElementById('uiPractice').style.display = mode === 'practice' ? 'block' : 'none';
+            document.getElementById('uiFreeInput').style.display = mode === 'free' ? 'block' : 'none';
+            
+            currentInput = '';
+            document.getElementById('inputDisplay').innerText = '';
+            clearTimeout(evaluateTimeout);
+            clearTimeout(wordTimeout);
+            if (mode === 'practice') newTrainerLetter();
+        }
+
+        const textInput = document.getElementById('textInput');
+        const morseInput = document.getElementById('morseInput');
+
+        textInput.addEventListener('input', () => {
+            const text = textInput.value.toUpperCase();
+            const morse = text.split('').map(char => morseDict[char] || char).join(' ');
+            morseInput.value = morse.replace(/ \/ /g, ' / '); 
+        });
+
+        morseInput.addEventListener('input', () => {
+            const morse = morseInput.value.trim().split(' ');
+            const text = morse.map(code => reverseDict[code] || (code === '/' ? ' ' : code)).join('');
+            textInput.value = text;
+        });
+
+        let audioCtx;
+        const DOT_DUR = 100;
+        let liveOscillator = null;
+        let liveGain = null;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playTone(duration) {
+            return new Promise(resolve => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine'; osc.frequency.value = 600; 
+                gain.gain.setValueAtTime(0, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.01);
+                gain.gain.setValueAtTime(1, audioCtx.currentTime + duration/1000 - 0.01);
+                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration/1000);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + duration / 1000);
+                setTimeout(resolve, duration);
+            });
+        }
+
+        function wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+        async function playMorseFromText() {
+            initAudio();
+            const chars = morseInput.value.split('');
+            for (let c of chars) {
+                if (c === '.') { await playTone(DOT_DUR); await wait(DOT_DUR); }
+                else if (c === '-') { await playTone(DOT_DUR * 3); await wait(DOT_DUR); }
+                else if (c === ' ') { await wait(DOT_DUR * 2); }
+                else if (c === '/') { await wait(DOT_DUR * 6); }
+            }
+        }
+
+        function startLiveTone() {
+            initAudio();
+            if (liveOscillator) return;
+            liveOscillator = audioCtx.createOscillator();
+            liveGain = audioCtx.createGain();
+            liveOscillator.type = 'sine';
+            liveOscillator.frequency.value = 600;
+            liveGain.gain.setValueAtTime(1, audioCtx.currentTime);
+            liveOscillator.connect(liveGain);
+            liveGain.connect(audioCtx.destination);
+            liveOscillator.start();
+        }
+
+        function stopLiveTone() {
+            if (liveOscillator && liveGain) {
+                liveGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.01);
+                setTimeout(() => { if (liveOscillator) { liveOscillator.stop(); liveOscillator = null; } }, 10);
+            }
+        }
+
+        let currentTarget = '';
+        let currentInput = '';
+        let pressStartTime = 0;
+        let evaluateTimeout;
+        let wordTimeout;
+
+        function newTrainerLetter() {
+            currentTarget = trainerLetters[Math.floor(Math.random() * trainerLetters.length)];
+            document.getElementById('targetLetter').innerText = currentTarget;
+            currentInput = '';
+            document.getElementById('inputDisplay').innerText = '';
+            document.getElementById('trainerStatus').innerText = '';
+        }
+
+        function processInput() {
+            if (trainerMode === 'practice') {
+                const expected = morseDict[currentTarget];
+                const statusEl = document.getElementById('trainerStatus');
+                if (currentInput === expected) {
+                    statusEl.innerText = "CORRECT!";
+                    statusEl.className = "status success";
+                    setTimeout(newTrainerLetter, 1000);
+                } else {
+                    statusEl.innerText = "ERROR (expected: " + expected + ")";
+                    statusEl.className = "status error";
+                    currentInput = '';
+                    setTimeout(() => { document.getElementById('inputDisplay').innerText = ''; statusEl.innerText = ''; }, 1500);
+                }
+            } else if (trainerMode === 'free') {
+                let char = reverseDict[currentInput] || '?';
+                document.getElementById('freeTextBox').innerText += char;
+                currentInput = '';
+                document.getElementById('inputDisplay').innerText = '';
+                
+                wordTimeout = setTimeout(() => {
+                    document.getElementById('freeTextBox').innerText += ' ';
+                }, 800);
+            }
+        }
+
+        const telegraphKey = document.getElementById('telegraphKey');
+
+        function handlePressDown(e) {
+            if (e && e.preventDefault && e.type !== 'keydown') e.preventDefault();
+            if (pressStartTime !== 0) return;
+
+            clearTimeout(evaluateTimeout);
+            clearTimeout(wordTimeout);
+            
+            pressStartTime = Date.now();
+            startLiveTone();
+            if (trainerMode === 'practice') document.getElementById('trainerStatus').innerText = '';
+        }
+
+        function handlePressUp(e) {
+            if (e && e.preventDefault && e.type !== 'keyup') e.preventDefault();
+            if (!pressStartTime) return;
+            
+            const duration = Date.now() - pressStartTime;
+            stopLiveTone();
+            
+            if (duration < 200) currentInput += '.';
+            else currentInput += '-';
+            
+            document.getElementById('inputDisplay').innerText = currentInput;
+            pressStartTime = 0;
+            
+            evaluateTimeout = setTimeout(processInput, 600);
+        }
+
+        telegraphKey.addEventListener('mousedown', handlePressDown);
+        telegraphKey.addEventListener('mouseup', handlePressUp);
+        telegraphKey.addEventListener('mouseleave', (e) => { if(pressStartTime) handlePressUp(e); });
+        telegraphKey.addEventListener('touchstart', handlePressDown, {passive: false});
+        telegraphKey.addEventListener('touchend', handlePressUp, {passive: false});
+
+        document.addEventListener('keydown', (e) => {
+            if (currentTab === 'trainer' && e.code === 'NumpadEnter') {
+                if (e.repeat) return;
+                handlePressDown(e);
+                telegraphKey.classList.add('active-key');
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (currentTab === 'trainer' && e.code === 'NumpadEnter') {
+                handlePressUp(e);
+                telegraphKey.classList.remove('active-key');
+            }
+        });
+
+        const refGrid = document.getElementById('refGrid');
+        for (const [char, code] of Object.entries(morseDict)) {
+            if (char === ' ' || char === '/') continue;
+            const card = document.createElement('div');
+            card.className = 'ref-card';
+            card.innerHTML = `<div class="char">${char}</div><div class="morse">${code}</div>`;
+            refGrid.appendChild(card);
+        }
+
+        newTrainerLetter();
+
+    </script>
+</body>
+</html>
